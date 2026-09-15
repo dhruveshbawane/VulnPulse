@@ -1,0 +1,13 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Raw Nessus scan data
+Scans/
+
+# Generated reports
+Outputs/
