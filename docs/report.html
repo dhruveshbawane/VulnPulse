@@ -1,285 +1,581 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>VulnPulse Vulnerability Report</title>
+    <title>VulnPulse - Vulnerability Management Report</title>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
             margin: 0;
             padding: 40px;
-            background: #f4f6f8;
-            color: #1f2937;
+            background: #f3f4f6;
+            color: #172033;
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
         }
 
         .container {
             max-width: 1200px;
-            margin: auto;
+            margin: 0 auto;
         }
 
-        h1 {
-            margin-bottom: 5px;
+        .header {
+            margin-bottom: 28px;
         }
 
-        .subtitle {
-            color: #6b7280;
-            margin-bottom: 30px;
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+        }
+
+        .header p {
+            margin: 6px 0 0;
+            color: #64748b;
+            font-size: 16px;
         }
 
         .summary {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 15px;
+            grid-template-columns:
+                repeat(6, minmax(0, 1fr));
+            gap: 14px;
             margin-bottom: 30px;
         }
 
         .card {
             background: white;
-            padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            box-shadow:
+                0 3px 10px rgba(15, 23, 42, 0.08);
+            border-top: 4px solid #64748b;
         }
 
-        .card h3 {
-            margin: 0 0 10px 0;
+        .card.critical {
+            border-top-color: #dc2626;
+        }
+
+        .card.high {
+            border-top-color: #ea580c;
+        }
+
+        .card.medium {
+            border-top-color: #ca8a04;
+        }
+
+        .card.low {
+            border-top-color: #2563eb;
+        }
+
+        .card.info {
+            border-top-color: #6b7280;
+        }
+
+        .card-label {
+            color: #64748b;
             font-size: 14px;
-            color: #6b7280;
+            font-weight: 600;
         }
 
-        .number {
-            font-size: 32px;
-            font-weight: bold;
-        }
-
-        .critical {
-            border-top: 5px solid #dc2626;
-        }
-
-        .high {
-            border-top: 5px solid #ea580c;
-        }
-
-        .medium {
-            border-top: 5px solid #ca8a04;
-        }
-
-        .low {
-            border-top: 5px solid #2563eb;
-        }
-
-        .info {
-            border-top: 5px solid #6b7280;
+        .card-value {
+            margin-top: 6px;
+            font-size: 30px;
+            font-weight: 700;
         }
 
         .section {
             background: white;
-            padding: 25px;
-            margin-bottom: 25px;
             border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 26px;
+            margin-bottom: 28px;
+            box-shadow:
+                0 3px 10px rgba(15, 23, 42, 0.08);
+        }
+
+        .section h2 {
+            margin-top: 0;
+            margin-bottom: 18px;
+            font-size: 22px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 900px;
         }
 
         th {
             background: #111827;
             color: white;
-            text-align: left;
             padding: 12px;
+            text-align: left;
+            font-size: 13px;
         }
 
         td {
-            padding: 12px;
+            padding: 11px 12px;
             border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            vertical-align: top;
         }
 
-        tr:hover {
-            background: #f9fafb;
+        tr:last-child td {
+            border-bottom: none;
         }
 
-        .badge {
-            padding: 5px 10px;
+        .severity {
+            display: inline-block;
+            padding: 5px 9px;
             border-radius: 999px;
             font-size: 12px;
-            font-weight: bold;
+            font-weight: 700;
         }
 
-        .badge-critical {
+        .severity-critical {
             background: #fee2e2;
-            color: #991b1b;
+            color: #b91c1c;
         }
 
-        .badge-high {
+        .severity-high {
             background: #ffedd5;
-            color: #9a3412;
+            color: #c2410c;
         }
 
-        .badge-medium {
+        .severity-medium {
             background: #fef3c7;
-            color: #92400e;
+            color: #a16207;
         }
 
-        .badge-low {
+        .severity-low {
             background: #dbeafe;
-            color: #1e40af;
+            color: #1d4ed8;
         }
 
-        .badge-info {
+        .severity-info {
             background: #e5e7eb;
-            color: #374151;
+            color: #4b5563;
+        }
+
+        .muted {
+            color: #64748b;
+        }
+
+        .solution {
+            max-width: 500px;
+            line-height: 1.5;
+        }
+
+        .detail-table {
+            min-width: 1100px;
+        }
+
+        .detail-table th {
+            white-space: nowrap;
+        }
+
+        .detail-table td {
+            line-height: 1.45;
         }
 
         .footer {
             text-align: center;
-            color: #6b7280;
             margin-top: 30px;
+            color: #64748b;
             font-size: 13px;
         }
 
-        @media (max-width: 1100px) {
+        @media (max-width: 900px) {
+            body {
+                padding: 20px;
+            }
+
             .summary {
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns:
+                    repeat(3, minmax(0, 1fr));
             }
         }
 
-        @media (max-width: 700px) {
+        @media (max-width: 600px) {
             .summary {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
             }
 
-            body {
-                padding: 20px;
+            .header h1 {
+                font-size: 26px;
             }
         }
     </style>
 </head>
 
+
 <body>
 
 <div class="container">
 
-    <h1>VulnPulse</h1>
 
-    <div class="subtitle">
-        Vulnerability Management Report
-    </div>
+    <!-- Header -->
 
-    <div class="summary">
+    <header class="header">
+        <h1>VulnPulse</h1>
+        <p>Vulnerability Management Report</p>
+    </header>
+
+
+    <!-- Summary -->
+
+    <section class="summary">
 
         <div class="card">
-            <h3>Total Findings</h3>
-            <div class="number">
+            <div class="card-label">Total Findings</div>
+            <div class="card-value">
                 {{ total_findings }}
             </div>
         </div>
 
+
         <div class="card critical">
-            <h3>Critical</h3>
-            <div class="number">
+            <div class="card-label">Critical</div>
+            <div class="card-value">
                 {{ severity_counts["Critical"] }}
             </div>
         </div>
 
+
         <div class="card high">
-            <h3>High</h3>
-            <div class="number">
+            <div class="card-label">High</div>
+            <div class="card-value">
                 {{ severity_counts["High"] }}
             </div>
         </div>
 
+
         <div class="card medium">
-            <h3>Medium</h3>
-            <div class="number">
+            <div class="card-label">Medium</div>
+            <div class="card-value">
                 {{ severity_counts["Medium"] }}
             </div>
         </div>
 
+
         <div class="card low">
-            <h3>Low</h3>
-            <div class="number">
+            <div class="card-label">Low</div>
+            <div class="card-value">
                 {{ severity_counts["Low"] }}
             </div>
         </div>
 
+
         <div class="card info">
-            <h3>Info</h3>
-            <div class="number">
+            <div class="card-label">Info</div>
+            <div class="card-value">
                 {{ severity_counts["Info"] }}
             </div>
         </div>
 
-    </div>
+    </section>
 
-    <div class="section">
+
+    <!-- Top Priority Findings -->
+
+    <section class="section">
 
         <h2>Top Priority Findings</h2>
 
-        <table>
+        <div class="table-wrapper">
 
-            <thead>
-                <tr>
-                    <th>Severity</th>
-                    <th>CVSS</th>
-                    <th>VPR</th>
-                    <th>EPSS</th>
-                    <th>Vulnerability</th>
-                    <th>Priority Score</th>
-                </tr>
-            </thead>
+            <table>
 
-            <tbody>
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th>CVSS</th>
+                        <th>VPR</th>
+                        <th>EPSS</th>
+                        <th>Vulnerability</th>
+                        <th>Priority Score</th>
+                    </tr>
+                </thead>
+
+
+                <tbody>
 
                 {% for finding in top_findings %}
 
-                <tr>
+                    <tr>
 
-                    <td>
-                        <span class="badge badge-{{ finding["Severity"]|lower }}">
-                            {{ finding["Severity"] }}
-                        </span>
-                    </td>
+                        <td>
+                            <span class="severity severity-{{ finding["Severity"] | lower }}">
+                                {{ finding["Severity"] }}
+                            </span>
+                        </td>
 
-                    <td>
-                        {{ finding["CVSS"] if finding["CVSS"] == finding["CVSS"] else "N/A" }}
-                    </td>
 
-                    <td>
-                        {{ finding["VPR"] if finding["VPR"] == finding["VPR"] else "N/A" }}
-                    </td>
+                        <td>
+                            {% set cvss = finding["CVSS"] | string | lower %}
 
-                    <td>
-                        {{ finding["EPSS"] if finding["EPSS"] == finding["EPSS"] else "N/A" }}
-                    </td>
+                            {% if cvss not in ["nan", "none", "", "n/a"] %}
+                                {{ finding["CVSS"] }}
+                            {% else %}
+                                <span class="muted">N/A</span>
+                            {% endif %}
+                        </td>
 
-                    <td>
-                        {{ finding["Vulnerability"] }}
-                    </td>
 
-                    <td>
-                        {{ finding["Priority Score"] }}
-                    </td>
+                        <td>
+                            {% set vpr = finding["VPR"] | string | lower %}
 
-                </tr>
+                            {% if vpr not in ["nan", "none", "", "n/a"] %}
+                                {{ finding["VPR"] }}
+                            {% else %}
+                                <span class="muted">N/A</span>
+                            {% endif %}
+                        </td>
+
+
+                        <td>
+                            {% set epss = finding["EPSS"] | string | lower %}
+
+                            {% if epss not in ["nan", "none", "", "n/a"] %}
+                                {{ finding["EPSS"] }}
+                            {% else %}
+                                <span class="muted">N/A</span>
+                            {% endif %}
+                        </td>
+
+
+                        <td>
+                            {{ finding["Vulnerability"] }}
+                        </td>
+
+
+                        <td>
+                            {{ finding["Priority Score"] }}
+                        </td>
+
+                    </tr>
 
                 {% endfor %}
 
-            </tbody>
+                </tbody>
 
-        </table>
+            </table>
 
-    </div>
+        </div>
 
-    <div class="footer">
+    </section>
+
+
+    <!-- Finding Details -->
+
+    <section class="section">
+
+        <h2>Finding Details</h2>
+
+        <div class="table-wrapper">
+
+            <table class="detail-table">
+
+                <thead>
+
+                    <tr>
+                        <th>Vulnerability</th>
+                        <th>Host</th>
+                        <th>Port</th>
+                        <th>CVEs</th>
+                        <th>Exploit</th>
+                        <th>CISA KEV</th>
+                        <th>Solution</th>
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                {% for finding in top_findings %}
+
+                    <tr>
+
+
+                        <!-- Vulnerability -->
+
+                        <td>
+
+                            <strong>
+                                {{ finding["Vulnerability"] }}
+                            </strong>
+
+                            <br>
+
+                            <span class="muted">
+                                Plugin {{ finding["Plugin ID"] }}
+                            </span>
+
+                        </td>
+
+
+                        <!-- Host -->
+
+                        <td>
+
+                            {{ finding["Hostname"] }}
+
+                            {% set ip = finding["IP Address"] | string | lower %}
+
+                            {% if ip not in ["nan", "none", "", "n/a"] %}
+
+                                <br>
+
+                                <span class="muted">
+                                    {{ finding["IP Address"] }}
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- Port -->
+
+                        <td>
+
+                            {% set port = finding["Port"] | string | lower %}
+
+                            {% if port not in ["nan", "none", "", "n/a"] %}
+
+                                {{ finding["Port"] }}
+
+                            {% else %}
+
+                                <span class="muted">
+                                    N/A
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- CVEs -->
+
+                        <td>
+
+                            {% set cves = finding["CVEs"] | string | lower %}
+
+                            {% if cves not in ["nan", "none", "", "n/a"] %}
+
+                                {{ finding["CVEs"] }}
+
+                            {% else %}
+
+                                <span class="muted">
+                                    N/A
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- Exploit -->
+
+                        <td>
+
+                            {% set exploit = finding["Exploit Available"] | string | lower %}
+
+                            {% if exploit not in ["nan", "none", "", "n/a"] %}
+
+                                {{ finding["Exploit Available"] }}
+
+                            {% else %}
+
+                                <span class="muted">
+                                    N/A
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- CISA KEV -->
+
+                        <td>
+
+                            {% set kev = finding["CISA Known Exploited"] | string | lower %}
+
+                            {% if kev not in ["nan", "none", "", "n/a"] %}
+
+                                {{ finding["CISA Known Exploited"] }}
+
+                            {% else %}
+
+                                <span class="muted">
+                                    N/A
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- Solution -->
+
+                        <td class="solution">
+
+                            {% set solution = finding["Solution"] | string | lower %}
+
+                            {% if solution not in ["nan", "none", "", "n/a"] %}
+
+                                {{ finding["Solution"] }}
+
+                            {% else %}
+
+                                <span class="muted">
+                                    N/A
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+    <!-- Footer -->
+
+    <footer class="footer">
         Generated by VulnPulse
-    </div>
+    </footer>
+
 
 </div>
 
 </body>
+
 </html>

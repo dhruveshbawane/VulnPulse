@@ -36,7 +36,24 @@ def generate_report(df, output_path):
         for severity in severity_order
     }
 
-    top_findings = df.head(10).to_dict(
+    # Prepare the top findings for the HTML report.
+    report_df = df.head(10).copy()
+
+    # Replace actual missing values.
+    report_df = report_df.fillna("N/A")
+
+    # Nessus/pandas data can sometimes contain the literal
+    # string "nan". Convert those values to a readable N/A.
+    report_df = report_df.replace(
+        {
+            "nan": "N/A",
+            "NaN": "N/A",
+            "None": "N/A",
+            "null": "N/A",
+        }
+    )
+
+    top_findings = report_df.to_dict(
         orient="records"
     )
 
