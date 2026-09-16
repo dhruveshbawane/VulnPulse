@@ -3,6 +3,7 @@ from pathlib import Path
 from .nessus import NessusClient
 from .parser import parse_vulnerabilities
 from .risk import prioritize_findings
+from .report import generate_report
 
 
 def run_pipeline():
@@ -82,6 +83,20 @@ def run_pipeline():
     print(
         f"[+] Prioritized CSV saved: "
         f"{output_path}"
+    )
+
+    report_path = Path(
+        "Outputs/vulnerability_report.html"
+    )
+
+    generate_report(
+        df,
+        report_path
+    )
+
+    print(
+        f"[+] HTML report saved: "
+        f"{report_path}"
     )
 
     print("\n" + "=" * 70)

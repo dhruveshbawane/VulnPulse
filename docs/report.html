@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>VulnPulse Vulnerability Report</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: #f4f6f8;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .card h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .number {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .critical {
+            border-top: 5px solid #dc2626;
+        }
+
+        .high {
+            border-top: 5px solid #ea580c;
+        }
+
+        .medium {
+            border-top: 5px solid #ca8a04;
+        }
+
+        .low {
+            border-top: 5px solid #2563eb;
+        }
+
+        .info {
+            border-top: 5px solid #6b7280;
+        }
+
+        .section {
+            background: white;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #111827;
+            color: white;
+            text-align: left;
+            padding: 12px;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge {
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge-critical {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-high {
+            background: #ffedd5;
+            color: #9a3412;
+        }
+
+        .badge-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-low {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-info {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .footer {
+            text-align: center;
+            color: #6b7280;
+            margin-top: 30px;
+            font-size: 13px;
+        }
+
+        @media (max-width: 1100px) {
+            .summary {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 700px) {
+            .summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>VulnPulse</h1>
+
+    <div class="subtitle">
+        Vulnerability Management Report
+    </div>
+
+    <div class="summary">
+
+        <div class="card">
+            <h3>Total Findings</h3>
+            <div class="number">
+                {{ total_findings }}
+            </div>
+        </div>
+
+        <div class="card critical">
+            <h3>Critical</h3>
+            <div class="number">
+                {{ severity_counts["Critical"] }}
+            </div>
+        </div>
+
+        <div class="card high">
+            <h3>High</h3>
+            <div class="number">
+                {{ severity_counts["High"] }}
+            </div>
+        </div>
+
+        <div class="card medium">
+            <h3>Medium</h3>
+            <div class="number">
+                {{ severity_counts["Medium"] }}
+            </div>
+        </div>
+
+        <div class="card low">
+            <h3>Low</h3>
+            <div class="number">
+                {{ severity_counts["Low"] }}
+            </div>
+        </div>
+
+        <div class="card info">
+            <h3>Info</h3>
+            <div class="number">
+                {{ severity_counts["Info"] }}
+            </div>
+        </div>
+
+    </div>
+
+    <div class="section">
+
+        <h2>Top Priority Findings</h2>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Severity</th>
+                    <th>CVSS</th>
+                    <th>VPR</th>
+                    <th>EPSS</th>
+                    <th>Vulnerability</th>
+                    <th>Priority Score</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for finding in top_findings %}
+
+                <tr>
+
+                    <td>
+                        <span class="badge badge-{{ finding["Severity"]|lower }}">
+                            {{ finding["Severity"] }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {{ finding["CVSS"] if finding["CVSS"] == finding["CVSS"] else "N/A" }}
+                    </td>
+
+                    <td>
+                        {{ finding["VPR"] if finding["VPR"] == finding["VPR"] else "N/A" }}
+                    </td>
+
+                    <td>
+                        {{ finding["EPSS"] if finding["EPSS"] == finding["EPSS"] else "N/A" }}
+                    </td>
+
+                    <td>
+                        {{ finding["Vulnerability"] }}
+                    </td>
+
+                    <td>
+                        {{ finding["Priority Score"] }}
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <div class="footer">
+        Generated by VulnPulse
+    </div>
+
+</div>
+
+</body>
+</html>
