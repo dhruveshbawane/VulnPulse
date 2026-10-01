@@ -47,15 +47,25 @@ class MockSession:
         self.requested_urls = []
 
     def get(self, url, timeout):
-        self.requested_urls.append((url, timeout))
-        return MockResponse(self.response_data)
+        self.requested_urls.append(
+            (url, timeout)
+        )
+        return MockResponse(
+            self.response_data
+        )
 
 
 def test_client_requires_api_keys(monkeypatch):
     # Use empty values so load_dotenv() does not replace them
     # with values from the real .env file.
-    monkeypatch.setenv("NESSUS_ACCESS_KEY", "")
-    monkeypatch.setenv("NESSUS_SECRET_KEY", "")
+    monkeypatch.setenv(
+        "NESSUS_ACCESS_KEY",
+        ""
+    )
+    monkeypatch.setenv(
+        "NESSUS_SECRET_KEY",
+        ""
+    )
 
     with pytest.raises(
         RuntimeError,
@@ -84,7 +94,9 @@ def test_get_scans(monkeypatch):
 
     assert len(scans) == 1
     assert scans[0]["id"] == 6
-    assert scans[0]["name"] == "Metasploitable2 baseline"
+    assert scans[0]["name"] == (
+        "Metasploitable2 baseline"
+    )
 
     assert mock_session.requested_urls[0][0] == (
         "https://localhost:8834/scans"
@@ -114,7 +126,9 @@ def test_find_scan(monkeypatch):
     scan = client.find_scan()
 
     assert scan["id"] == 6
-    assert scan["name"] == "Metasploitable2 baseline"
+    assert scan["name"] == (
+        "Metasploitable2 baseline"
+    )
 
 
 def test_find_scan_when_scan_does_not_exist(monkeypatch):
@@ -155,7 +169,10 @@ def test_download_scan(monkeypatch):
         "vulnerabilities": []
     }
 
-    mock_session = MockSession(scan_data)
+    mock_session = MockSession(
+        scan_data
+    )
+
     client.session = mock_session
 
     result = client.download_scan(6)
@@ -165,6 +182,47 @@ def test_download_scan(monkeypatch):
     assert mock_session.requested_urls[0][0] == (
         "https://localhost:8834/scans/6"
     )
+
+
+def test_get_host_details(monkeypatch):
+    set_nessus_env(monkeypatch)
+
+    client = NessusClient()
+
+    host_data = {
+        "vulnerabilities": [
+            {
+                "host_id": 2,
+                "plugin_id": 134862,
+                "plugin_name": (
+                    "Apache Tomcat AJP Connector "
+                    "Request Injection (Ghostcat)"
+                ),
+                "severity": 3,
+            }
+        ],
+        "compliance": {},
+        "info": {}
+    }
+
+    mock_session = MockSession(
+        host_data
+    )
+
+    client.session = mock_session
+
+    result = client.get_host_details(
+        scan_id=6,
+        host_id=2
+    )
+
+    assert result == host_data
+
+    assert mock_session.requested_urls[0][0] == (
+        "https://localhost:8834/scans/6/hosts/2"
+    )
+
+    assert mock_session.requested_urls[0][1] == 60
 
 
 def test_save_raw_scan(tmp_path):
@@ -193,6 +251,8 @@ def test_save_raw_scan(tmp_path):
         "r",
         encoding="utf-8"
     ) as file:
-        saved_data = json.load(file)
+        saved_data = json.load(
+            file
+        )
 
     assert saved_data == scan_data

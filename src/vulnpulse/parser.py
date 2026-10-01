@@ -103,7 +103,10 @@ def _get_exploit_information(plugin_attributes):
             .get("value", [])
         )
 
-        if isinstance(values, list) and values:
+        if isinstance(values, str):
+            values = [values]
+
+        if values:
             cisa_known_exploited = values[0]
 
     return (
@@ -148,6 +151,31 @@ def _build_plugin_lookup(scan_results):
 
         if plugin_id is not None:
             lookup[str(plugin_id)] = plugin
+
+    return lookup
+
+
+def _build_host_lookup(scan_results):
+    """
+    Build a lookup table from Nessus host ID
+    to the corresponding host record.
+    """
+
+    lookup = {}
+
+    hosts = scan_results.get(
+        "hosts",
+        []
+    )
+
+    for host in hosts:
+        host_id = host.get("host_id")
+
+        if host_id is None:
+            host_id = host.get("id")
+
+        if host_id is not None:
+            lookup[str(host_id)] = host
 
     return lookup
 
@@ -231,8 +259,9 @@ def parse_vulnerabilities(
     """
     Parse Nessus vulnerability data into a pandas DataFrame.
 
-    The parser combines Nessus vulnerability summary records
-    with detailed plugin information when available.
+    The parser combines Nessus vulnerability records
+    with detailed plugin information and host-specific
+    records when available.
     """
 
     vulnerabilities = scan_results.get(
@@ -251,6 +280,10 @@ def parse_vulnerabilities(
     )
 
     plugin_lookup = _build_plugin_lookup(
+        scan_results
+    )
+
+    host_lookup = _build_host_lookup(
         scan_results
     )
 
@@ -298,10 +331,34 @@ def parse_vulnerabilities(
             vulnerability
         )
 
-        hosts = _get_host_records(
-            plugin,
-            fallback_hosts
+        # Prefer the host ID from the host-specific
+        # Nessus API response.
+        host_id = vulnerability.get(
+            "host_id"
         )
+
+        hosts = []
+
+        if host_id is not None:
+            host = host_lookup.get(
+                str(host_id)
+            )
+
+            if host:
+                hosts = [host]
+
+        # For test fixtures or older scan structures
+        # without host_id, use detailed plugin hosts.
+        if not hosts:
+            if len(fallback_hosts) == 1:
+                fallback = fallback_hosts
+            else:
+                fallback = []
+
+            hosts = _get_host_records(
+                plugin,
+                fallback
+            )
 
         if not hosts:
             hosts = [
@@ -316,13 +373,19 @@ def parse_vulnerabilities(
                 "host_ip"
             )
 
+            # Some host-specific Nessus records may
+            # use "ip" instead of "host_ip".
+            if not ip_address:
+                ip_address = host.get(
+                    "ip"
+                )
+
             nessus_hostname = host.get(
                 "hostname"
             )
 
-            # Some Nessus fallback host records do not
-            # provide host_ip. If hostname contains an IP,
-            # use it as the IP address.
+            # Some Nessus records don't provide host_ip.
+            # If hostname contains an IP, use it.
             if not ip_address and nessus_hostname:
                 try:
                     ipaddress.ip_address(

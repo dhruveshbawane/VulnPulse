@@ -1,14 +1,28 @@
-def prioritize_findings(df, asset_criticality=3):
+def prioritize_findings(
+    df,
+    asset_criticality=3
+):
     """
-    Calculate the baseline VulnPulse priority score.
+    Calculate the VulnPulse priority score.
 
     Priority Score =
         Severity Score × Asset Criticality
+
+    Asset criticality can be provided as:
+    - a single number for all assets
+    - a dictionary mapping IP addresses to criticality
     """
 
     df = df.copy()
 
-    df["Asset Criticality"] = asset_criticality
+    if isinstance(asset_criticality, dict):
+        df["Asset Criticality"] = (
+            df["IP Address"]
+            .map(asset_criticality)
+            .fillna(1)
+        )
+    else:
+        df["Asset Criticality"] = asset_criticality
 
     df["Priority Score"] = (
         df["Severity Score"]

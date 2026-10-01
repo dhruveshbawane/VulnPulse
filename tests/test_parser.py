@@ -336,3 +336,51 @@ def test_parse_vulnerabilities_empty_results():
         parse_vulnerabilities(
             scan_results
         )
+
+def test_parse_vulnerabilities_uses_host_id_for_host_attribution():
+    scan_results = {
+        "hosts": [
+            {
+                "host_id": 2,
+                "hostname": "192.168.84.128",
+            },
+            {
+                "host_id": 3,
+                "hostname": "192.168.84.129",
+            },
+            {
+                "host_id": 4,
+                "hostname": "192.168.84.130",
+            },
+        ],
+        "vulnerabilities": [
+            {
+                "host_id": 2,
+                "plugin_id": 99999,
+                "plugin_name": "Linux Test Vulnerability",
+                "severity": 4,
+                "score": 10.0,
+                "vpr_score": None,
+                "epss_score": None,
+                "plugin_family": "Test",
+                "count": 1,
+                "isFallBackScore": False,
+            },
+        ],
+    }
+
+    df = parse_vulnerabilities(scan_results)
+
+    assert len(df) == 1
+
+    assert df.iloc[0]["IP Address"] == (
+        "192.168.84.128"
+    )
+
+    assert df.iloc[0]["Hostname"] == (
+        "192.168.84.128"
+    )
+
+    assert df.iloc[0]["Vulnerability"] == (
+        "Linux Test Vulnerability"
+    )

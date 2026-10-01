@@ -96,6 +96,18 @@ class NessusClient:
 
         return response.json()
 
+    def get_host_details(self, scan_id, host_id):
+        """Download vulnerability results for one specific host."""
+
+        response = self.session.get(
+            f"{self.base_url}/scans/{scan_id}/hosts/{host_id}",
+            timeout=60
+        )
+
+        response.raise_for_status()
+
+        return response.json()
+
     @staticmethod
     def save_raw_scan(scan_results, output_path):
         """Save raw Nessus JSON to disk."""
