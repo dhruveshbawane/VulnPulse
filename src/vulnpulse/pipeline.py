@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from .comparison import compare_findings
 from .nessus import NessusClient
 from .parser import parse_vulnerabilities
 from .risk import prioritize_findings
@@ -45,7 +44,7 @@ ASSET_INVENTORY = {
 # ----------------------------------------------------------------------
 
 SCAN_OUTPUT_NAMES = {
-    "Metasploitable2 baseline": "baseline_3host",
+    "VulnPulse - Lab Baseline": "baseline_3host",
     "VulnPulse - Windows 10 Credentialed": "windows10_credentialed",
     "VulnPulse consolidated": "consolidated",
 }
@@ -76,15 +75,6 @@ CONSOLIDATED_OUTPUT_DIRECTORY = Path(
 )
 
 WINDOWS_HOST_IP = "192.168.84.129"
-
-
-# ----------------------------------------------------------------------
-# Comparison configuration.
-#
-# The baseline 3-host scan contains the original unauthenticated
-# Windows 10 results. When processing the credentialed Windows scan,
-# VulnPulse compares the same Windows asset across both datasets.
-# ----------------------------------------------------------------------
 
 
 def _slugify_scan_name(scan_name):
@@ -140,19 +130,6 @@ def _load_saved_scan_dataframe(
     )
 
 
-def _filter_by_host(df, host_ip):
-    """Return findings belonging to one specific asset."""
-
-    if "IP Address" not in df.columns:
-        return df.iloc[0:0].copy()
-
-    return df[
-        df["IP Address"]
-        .astype(str)
-        .eq(host_ip)
-    ].copy()
-
-
 def _add_inventory_fields(df):
     """
     Add platform information and apply asset-specific priority
@@ -183,83 +160,6 @@ def _add_inventory_fields(df):
     )
 
     return df
-
-
-def _build_windows_comparison(
-    comparison_df,
-    baseline_path=BASELINE_SCAN_PATH,
-):
-    """
-    Compare the Windows credentialed dataset against the original
-    unauthenticated Windows result from the baseline scan.
-
-    Only the Windows asset is compared so Metasploitable2 and VPLE
-    findings do not distort the visibility comparison.
-    """
-
-    baseline_path = Path(
-        baseline_path
-    )
-
-    if not baseline_path.exists():
-        print(
-            f"[!] Baseline scan not found: "
-            f"{baseline_path}"
-        )
-
-        return None
-
-    hostname_inventory = {
-        ip: asset["hostname"]
-        for ip, asset in ASSET_INVENTORY.items()
-    }
-
-    try:
-        baseline_df = _load_saved_scan_dataframe(
-            baseline_path,
-            asset_inventory=hostname_inventory,
-        )
-
-    except (
-        OSError,
-        json.JSONDecodeError,
-        ValueError,
-        KeyError,
-    ) as exc:
-
-        print(
-            f"[!] Could not load baseline scan for "
-            f"comparison: {exc}"
-        )
-
-        return None
-
-    baseline_windows = _filter_by_host(
-        baseline_df,
-        WINDOWS_HOST_IP,
-    )
-
-    comparison_windows = _filter_by_host(
-        comparison_df,
-        WINDOWS_HOST_IP,
-    )
-
-    comparison = compare_findings(
-        baseline_windows,
-        comparison_windows,
-    )
-
-    comparison["baseline_scan"] = str(
-        baseline_path
-    )
-
-    comparison["comparison_scan"] = (
-        "windows10_credentialed"
-    )
-
-    comparison["host_ip"] = WINDOWS_HOST_IP
-
-    return comparison
 
 
 def _build_consolidated_dataframe():
@@ -376,11 +276,6 @@ def _run_consolidated_pipeline():
         / "vulnerability_report.html"
     )
 
-    comparison_path = (
-        output_directory
-        / "scan_comparison.json"
-    )
-
     print("=" * 70)
 
     print(
@@ -436,31 +331,6 @@ def _run_consolidated_pipeline():
     df = _build_consolidated_dataframe()
 
     # --------------------------------------------------------------
-    # Build Windows authentication visibility comparison.
-    # --------------------------------------------------------------
-
-    print(
-        "\n[+] Building Windows "
-        "authentication visibility comparison..."
-    )
-
-    hostname_inventory = {
-        ip: asset["hostname"]
-        for ip, asset in ASSET_INVENTORY.items()
-    }
-
-    windows_comparison_df = _load_saved_scan_dataframe(
-        WINDOWS_CREDENTIALED_SCAN_PATH,
-        asset_inventory=hostname_inventory,
-    )
-
-    comparison_result = (
-        _build_windows_comparison(
-            windows_comparison_df
-        )
-    )
-
-    # --------------------------------------------------------------
     # Save prioritized CSV.
     # --------------------------------------------------------------
 
@@ -480,37 +350,12 @@ def _run_consolidated_pipeline():
     )
 
     # --------------------------------------------------------------
-    # Save comparison metadata.
-    # --------------------------------------------------------------
-
-    if comparison_result:
-
-        comparison_path.write_text(
-            json.dumps(
-                comparison_result,
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
-
-        print(
-            "[+] Windows comparison saved: "
-            f"{comparison_path}"
-        )
-
-        print(
-            "[+] Additional visibility: "
-            f"{comparison_result['additional_visibility']}"
-        )
-
-    # --------------------------------------------------------------
     # Generate the main consolidated dashboard.
     # --------------------------------------------------------------
 
     generate_report(
         df,
         report_path,
-        comparison_result=comparison_result,
     )
 
     print(
@@ -610,9 +455,7 @@ def run_pipeline(scan_name=None):
     # --------------------------------------------------------------
 
     if scan_name == CONSOLIDATED_SCAN_NAME:
-
         _run_consolidated_pipeline()
-
         return
 
     print("=" * 70)
@@ -656,11 +499,6 @@ def run_pipeline(scan_name=None):
     report_path = (
         output_directory
         / "vulnerability_report.html"
-    )
-
-    comparison_path = (
-        output_directory
-        / "scan_comparison.json"
     )
 
     print(
@@ -897,56 +735,12 @@ def run_pipeline(scan_name=None):
     )
 
     # ------------------------------------------------------------------
-    # Build same-host comparison when processing the credentialed
-    # Windows scan.
-    # ------------------------------------------------------------------
-
-    comparison_result = None
-
-    if (
-        client.scan_name
-        == "VulnPulse - Windows 10 Credentialed"
-    ):
-
-        print(
-            "\n[+] Building Windows "
-            "authentication visibility comparison..."
-        )
-
-        comparison_result = (
-            _build_windows_comparison(
-                df
-            )
-        )
-
-        if comparison_result:
-
-            comparison_path.write_text(
-                json.dumps(
-                    comparison_result,
-                    indent=2
-                ),
-                encoding="utf-8"
-            )
-
-            print(
-                "[+] Windows comparison saved: "
-                f"{comparison_path}"
-            )
-
-            print(
-                "[+] Additional visibility: "
-                f"{comparison_result['additional_visibility']}"
-            )
-
-    # ------------------------------------------------------------------
     # Generate HTML report.
     # ------------------------------------------------------------------
 
     generate_report(
         df,
         report_path,
-        comparison_result=comparison_result,
     )
 
     print(

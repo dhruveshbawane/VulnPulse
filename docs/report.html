@@ -910,44 +910,39 @@
            SORTING
         ========================================================== */
 
-        .sort-button {
+        /* Sort */
 
-            border:
-                0;
+.sort-button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+}
 
-            background:
-                transparent;
+/* No indicator on inactive sortable columns */
 
-            color:
-                inherit;
+.sort-button::after {
+    content: none;
+}
 
-            font:
-                inherit;
+/* Indicator only on the active sort column */
 
-            font-weight:
-                700;
+.sort-button.active::after {
+    margin-left: 4px;
+    font-size: 10px;
+    opacity: 0.8;
+}
 
-            cursor:
-                pointer;
+.sort-button.active.asc::after {
+    content: "↑";
+}
 
-            padding:
-                0;
-
-        }
-
-        .sort-button.active::after {
-            margin-left: 4px;
-            font-size: 10px;
-            opacity: 0.8;
-        }
-
-        .sort-button.active.asc::after {
-            content: "â†‘";
-        }
-
-        .sort-button.active.desc::after {
-            content: "â†“";
-        }
+.sort-button.active.desc::after {
+    content: "↓";
+}
 
         /* ==========================================================
            BADGES
@@ -2510,8 +2505,7 @@
                 </h2>
 
                 <p class="section-description">
-                    Highest-ranked findings using
-                    Severity Ã— Asset Criticality.
+                    Highest-ranked findings using Severity &times; Asset Criticality.
                 </p>
 
             </div>
@@ -2972,7 +2966,7 @@
                 id="closeModal"
                 aria-label="Close finding details"
             >
-                Ã—
+                &times;
             </button>
 
         </div>
@@ -3271,37 +3265,37 @@
 
     function updateSortIndicators() {
 
-        document
-            .querySelectorAll(
-                ".sort-button"
-            )
-            .forEach(
-                function (button) {
+    document
+        .querySelectorAll(
+            ".sort-button"
+        )
+        .forEach(
+            function (button) {
 
-                    const isActive =
-                        button.dataset.sort
-                        === sortKey;
+                const isActive =
+                    button.dataset.sort
+                    === sortKey;
 
-                    button.classList.toggle(
-                        "active",
-                        isActive
-                    );
+                button.classList.toggle(
+                    "active",
+                    isActive
+                );
 
-                    button.classList.toggle(
-                        "asc",
-                        isActive &&
-                        !sortDescending
-                    );
+                button.classList.toggle(
+                    "asc",
+                    isActive &&
+                    !sortDescending
+                );
 
-                    button.classList.toggle(
-                        "desc",
-                        isActive &&
-                        sortDescending
-                    );
+                button.classList.toggle(
+                    "desc",
+                    isActive &&
+                    sortDescending
+                );
 
-                }
-            );
-        }
+            }
+        );
+}
 
 
     function normalize(
@@ -3847,10 +3841,8 @@
                 filteredFindings.length
             );
 
-
         resultStatus.textContent =
-            `Showing ${showingStart}â€“${showingEnd} of ${filteredFindings.length} findings`;
-
+            `Showing ${showingStart}\u2013${showingEnd} of ${filteredFindings.length} findings`;
 
         pageStatus.textContent =
             `Page ${currentPage} of ${totalPages}`;
