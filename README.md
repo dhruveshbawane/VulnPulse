@@ -24,9 +24,12 @@ Looking only at the raw scanner output makes it difficult to answer questions li
 - Which vulnerabilities should be reviewed first?
 - How can the results be presented in a way that is easy to understand?
 
-VulnPulse adds a small management layer on top of Nessus.
+VulnPulse adds a small management layer on top of Nessus. It takes the scanner data and turns it into a structured security report.
 
-It takes the scanner data and turns it into a structured security report.
+---
+## Live Dashboard
+
+[**Launch VulnPulse Dashboard**](https://dhruveshbawane.github.io/VulnPulse/)
 
 ---
 
