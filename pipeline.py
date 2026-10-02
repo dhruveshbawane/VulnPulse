@@ -1,4 +1,11 @@
-from src.vulnpulse.pipeline import run_pipeline
+from src.vulnpulse.pipeline import (
+    parse_arguments,
+    run_pipeline,
+)
+
 
 if __name__ == "__main__":
-    run_pipeline()
+    args = parse_arguments()
+    run_pipeline(
+        scan_name=args.scan_name
+    )

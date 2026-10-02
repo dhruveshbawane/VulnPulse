@@ -1,3 +1,5 @@
+import argparse
+import re
 from pathlib import Path
 
 from .nessus import NessusClient
@@ -32,7 +34,32 @@ ASSET_INVENTORY = {
 }
 
 
-def run_pipeline():
+# ----------------------------------------------------------------------
+# Known scan output names.
+#
+# These keep the two important lab datasets clearly separated.
+# ----------------------------------------------------------------------
+
+SCAN_OUTPUT_NAMES = {
+    "Metasploitable2 baseline": "baseline_3host",
+    "VulnPulse - Windows 10 Credentialed": "windows10_credentialed",
+}
+
+
+def _slugify_scan_name(scan_name):
+    """Convert a scan name into a safe filesystem-friendly name."""
+
+    if scan_name in SCAN_OUTPUT_NAMES:
+        return SCAN_OUTPUT_NAMES[scan_name]
+
+    slug = scan_name.lower()
+    slug = re.sub(r"[^a-z0-9]+", "_", slug)
+    slug = slug.strip("_")
+
+    return slug or "scan"
+
+
+def run_pipeline(scan_name=None):
     """Execute the complete VulnPulse pipeline."""
 
     print("=" * 70)
@@ -41,9 +68,41 @@ def run_pipeline():
 
     client = NessusClient()
 
+    # ------------------------------------------------------------------
+    # Optional command-line scan override.
+    #
+    # Without --scan, the value from NESSUS_SCAN_NAME in .env is used.
+    # ------------------------------------------------------------------
+
+    if scan_name:
+        client.scan_name = scan_name
+
+    output_name = _slugify_scan_name(
+        client.scan_name
+    )
+
+    raw_path = Path(
+        "Scans"
+    ) / f"{output_name}.json"
+
+    output_directory = Path(
+        "Outputs"
+    ) / output_name
+
+    output_path = (
+        output_directory
+        / "prioritized_findings.csv"
+    )
+
+    report_path = (
+        output_directory
+        / "vulnerability_report.html"
+    )
+
     print("\n[+] Configuration loaded")
     print(f"[+] Nessus URL : {client.base_url}")
     print(f"[+] Scan       : {client.scan_name}")
+    print(f"[+] Dataset    : {output_name}")
 
     print("\n[+] Connecting to Nessus...")
 
@@ -51,6 +110,10 @@ def run_pipeline():
 
     print("[+] Nessus API connection successful")
     print(f"[+] Available scans: {len(scans)}")
+
+    # ------------------------------------------------------------------
+    # Locate the requested scan.
+    # ------------------------------------------------------------------
 
     scan = client.find_scan()
 
@@ -63,9 +126,15 @@ def run_pipeline():
         f"{scan.get('status', 'unknown')}"
     )
 
+    # ------------------------------------------------------------------
+    # Download scan-level data.
+    # ------------------------------------------------------------------
+
     print("\n[+] Downloading scan results...")
 
-    scan_results = client.download_scan(scan_id)
+    scan_results = client.download_scan(
+        scan_id
+    )
 
     print("[+] Scan results downloaded")
 
@@ -120,7 +189,7 @@ def run_pipeline():
         )
 
         print(
-            f"    └─ Vulnerability records: "
+            f"    |- Vulnerability records: "
             f"{len(vulnerabilities)}"
         )
 
@@ -148,10 +217,6 @@ def run_pipeline():
     # ------------------------------------------------------------------
     # Save the local raw scan data.
     # ------------------------------------------------------------------
-
-    raw_path = Path(
-        "Scans/nessus_scan.json"
-    )
 
     client.save_raw_scan(
         scan_results,
@@ -216,10 +281,6 @@ def run_pipeline():
     # Save prioritized CSV.
     # ------------------------------------------------------------------
 
-    output_path = Path(
-        "Outputs/prioritized_findings.csv"
-    )
-
     output_path.parent.mkdir(
         parents=True,
         exist_ok=True
@@ -238,10 +299,6 @@ def run_pipeline():
     # ------------------------------------------------------------------
     # Generate HTML report.
     # ------------------------------------------------------------------
-
-    report_path = Path(
-        "Outputs/vulnerability_report.html"
-    )
 
     generate_report(
         df,
@@ -268,7 +325,7 @@ def run_pipeline():
         "High",
         "Medium",
         "Low",
-        "Info"
+        "Info",
     ]:
         print(
             f"{severity:<10}: "
@@ -338,5 +395,30 @@ def run_pipeline():
     print("=" * 70)
 
 
+def parse_arguments():
+    """Parse command-line options."""
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run the VulnPulse Nessus vulnerability "
+            "management pipeline."
+        )
+    )
+
+    parser.add_argument(
+        "--scan",
+        dest="scan_name",
+        help=(
+            "Nessus scan name to process. "
+            "If omitted, NESSUS_SCAN_NAME from .env is used."
+        ),
+    )
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    run_pipeline()
+    args = parse_arguments()
+    run_pipeline(
+        scan_name=args.scan
+    )
