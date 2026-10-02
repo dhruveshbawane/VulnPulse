@@ -2,7 +2,7 @@
 
 **VulnPulse is a Python-based vulnerability management pipeline that collects Nessus findings, organizes them by asset, prioritizes them using severity and asset criticality, and generates an interactive HTML security dashboard.**
 
-I built VulnPulse as a hands-on cybersecurity lab project to understand how vulnerability management works beyond just running a vulnerability scanner.
+I built VulnPulse as a hands-on cybersecurity lab project to understand how vulnerability management works beyond simply running a vulnerability scanner.
 
 The main idea is simple:
 
@@ -65,26 +65,27 @@ The complete workflow is:
 For the consolidated dashboard, VulnPulse combines the data from the lab scans into one view.
 
 ```text
-Metasploitable2 baseline
+VulnPulse - Lab Baseline
         |
-        +---- Linux findings
+        +---- m2-legacy Linux findings
         |
+        +---- vple-web Linux findings
         |
-VPLE baseline
+        +---- Windows baseline findings
+                         |
+                         X  replaced by credentialed results
+
+VulnPulse - Windows 10 Credentialed
         |
-        +---- Linux findings
-        |
-        |
-Windows credentialed scan
-        |
-        +---- Windows findings
-        |
-        v
-Consolidated dataset
-        |
-        v
-VulnPulse dashboard
+        +---- win10-nova Windows findings
+                         |
+                         v
+                Consolidated dataset
+                         |
+                         v
+                VulnPulse dashboard
 ```
+The Windows baseline findings are replaced by the credentialed Windows results in the consolidated dataset so that the same Windows findings are not counted twice.
 
 ---
 
@@ -484,6 +485,11 @@ The selected theme is stored in the browser.
 Scan Report/
 │
 ├── docs/
+│   ├── images/
+│   │   ├── nessus-scan.png
+│   │   ├── nessus-windows-credentialed.png
+│   │   ├── vulnpulse-dashboard.png
+│   │   └── finding-details.png
 │   └── report.html
 │
 ├── Outputs/
@@ -768,66 +774,6 @@ Some of the main lessons from this project:
 
 ---
 
-# Current Project Status
-
-```text
-✓ Nessus API integration
-✓ Host-specific vulnerability collection
-✓ Vulnerability normalization
-✓ Asset inventory
-✓ Asset criticality
-✓ Risk prioritization
-✓ Credentialed Windows assessment
-✓ Consolidated 3-asset dataset
-✓ Interactive HTML dashboard
-✓ Search and filtering
-✓ Sorting
-✓ Pagination
-✓ Finding details modal
-✓ Multiple dashboard themes
-✓ CSV output
-✓ HTML report generation
-✓ Automated tests
-```
-
-Current lab result:
-
-```text
-3 assets
-361 findings
-
-31 Critical
-71 High
-27 Medium
-11 Low
-221 Info
-
-23 automated tests passing
-```
-
----
-
-# Future Improvements
-
-Possible future improvements for VulnPulse:
-
-```text
-[ ] Add remediation tracking
-[ ] Add vulnerability aging
-[ ] Add patch / re-scan workflow
-[ ] Add vulnerability trend history
-[ ] Add more assets
-[ ] Add CVE-level deduplication
-[ ] Add additional risk factors
-[ ] Add database storage
-[ ] Add API endpoints
-[ ] Add scheduled scanning
-[ ] Add CI/CD quality checks
-[ ] Add dashboard charts
-```
-
----
-
 # Why the Project Is Called VulnPulse
 
 The name comes from two simple ideas:
@@ -853,37 +799,10 @@ Do not use the vulnerable systems or this project against systems without proper
 # Author
 
 **Dhruvesh Bawane**
-
-Cybersecurity / IT Security
+IT Security Analyst | Cybersecurity
 
 GitHub:
-
 https://github.com/dhruveshbawane
 
 LinkedIn:
-
 https://www.linkedin.com/in/dhruvesh-bawane
-```
-
-### One change I'd make before you paste it
-
-Your current project has **23 tests**, not 25, because we removed the comparison test suite. So the README correctly says:
-
-```text
-23 automated tests passing
-```
-
-Also, notice the README no longer contains:
-
-```text
-comparison.py
-test_comparison.py
-compare.py
-Scan Comparison
-Additional Visibility
-Compare Two Datasets
-```
-
-That keeps the documentation aligned with the architecture you actually finished.
-
-I would put **2–3 screenshots** under the “Security Dashboard” section as the next README improvement, because your dashboard is one of the strongest visual parts of the project.
