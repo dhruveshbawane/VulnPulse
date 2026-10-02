@@ -6,6 +6,32 @@ from .risk import prioritize_findings
 from .report import generate_report
 
 
+# ----------------------------------------------------------------------
+# Lab asset inventory
+#
+# These hostnames, platforms and criticality values are defined for the
+# VulnPulse demonstration lab.
+# ----------------------------------------------------------------------
+
+ASSET_INVENTORY = {
+    "192.168.84.128": {
+        "hostname": "m2-legacy",
+        "platform": "Linux (Ubuntu 8.04)",
+        "criticality": 3,
+    },
+    "192.168.84.129": {
+        "hostname": "win10-nova",
+        "platform": "Windows 10",
+        "criticality": 2,
+    },
+    "192.168.84.130": {
+        "hostname": "vple-web",
+        "platform": "Linux (Ubuntu 14.04)",
+        "criticality": 1,
+    },
+}
+
+
 def run_pipeline():
     """Execute the complete VulnPulse pipeline."""
 
@@ -44,8 +70,11 @@ def run_pipeline():
     print("[+] Scan results downloaded")
 
     # ------------------------------------------------------------------
-    # Retrieve vulnerability records separately for each scanned host.
-    # This avoids incorrectly assigning one host's findings to another.
+    # Build host-specific vulnerability dataset.
+    #
+    # The scan-level vulnerability list can contain aggregate records.
+    # We therefore retrieve vulnerability records separately for every
+    # host to preserve correct host attribution.
     # ------------------------------------------------------------------
 
     host_vulnerabilities = []
@@ -98,8 +127,7 @@ def run_pipeline():
         for vulnerability in vulnerabilities:
             vulnerability = vulnerability.copy()
 
-            # Preserve the Nessus host association so the parser
-            # can map each record to the correct IP address.
+            # Preserve the Nessus host association.
             vulnerability["host_id"] = host_id
 
             host_vulnerabilities.append(
@@ -107,7 +135,7 @@ def run_pipeline():
             )
 
     # Replace the aggregate vulnerability list with the
-    # host-specific records.
+    # host-specific records collected above.
     scan_results["vulnerabilities"] = (
         host_vulnerabilities
     )
@@ -118,7 +146,7 @@ def run_pipeline():
     )
 
     # ------------------------------------------------------------------
-    # Save the raw scan locally.
+    # Save the local raw scan data.
     # ------------------------------------------------------------------
 
     raw_path = Path(
@@ -136,11 +164,38 @@ def run_pipeline():
     )
 
     # ------------------------------------------------------------------
-    # Parse vulnerability data.
+    # Build inventory mappings.
+    # ------------------------------------------------------------------
+
+    hostname_inventory = {
+        ip: asset["hostname"]
+        for ip, asset in ASSET_INVENTORY.items()
+    }
+
+    platform_inventory = {
+        ip: asset["platform"]
+        for ip, asset in ASSET_INVENTORY.items()
+    }
+
+    asset_criticality = {
+        ip: asset["criticality"]
+        for ip, asset in ASSET_INVENTORY.items()
+    }
+
+    # ------------------------------------------------------------------
+    # Parse and normalize vulnerability data.
     # ------------------------------------------------------------------
 
     df = parse_vulnerabilities(
-        scan_results
+        scan_results,
+        asset_inventory=hostname_inventory
+    )
+
+    # Add platform information from the lab inventory.
+    df["Platform"] = (
+        df["IP Address"]
+        .map(platform_inventory)
+        .fillna("Unknown")
     )
 
     print(
@@ -149,17 +204,8 @@ def run_pipeline():
     )
 
     # ------------------------------------------------------------------
-    # Define lab asset criticality.
-    #
-    # These values are for the demonstration lab and are not
-    # measurements of real production business importance.
+    # Calculate priority using asset-specific criticality.
     # ------------------------------------------------------------------
-
-    asset_criticality = {
-        "192.168.84.128": 3,  # Metasploitable2
-        "192.168.84.129": 2,  # Windows 10
-        "192.168.84.130": 1,  # VPLE
-    }
 
     df = prioritize_findings(
         df,
@@ -239,7 +285,12 @@ def run_pipeline():
 
     host_summary = (
         df.groupby(
-            ["IP Address", "Asset Criticality"]
+            [
+                "Hostname",
+                "IP Address",
+                "Platform",
+                "Asset Criticality",
+            ]
         )
         .size()
         .reset_index(
@@ -263,14 +314,16 @@ def run_pipeline():
 
     top_findings = df[
         [
+            "Hostname",
             "IP Address",
+            "Platform",
             "Severity",
             "CVSS",
             "VPR",
             "EPSS",
             "Vulnerability",
             "Asset Criticality",
-            "Priority Score"
+            "Priority Score",
         ]
     ].head(10)
 
