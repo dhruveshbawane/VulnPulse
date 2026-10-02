@@ -1,7 +1,9 @@
 import argparse
+import json
 import re
 from pathlib import Path
 
+from .comparison import compare_findings
 from .nessus import NessusClient
 from .parser import parse_vulnerabilities
 from .risk import prioritize_findings
@@ -37,13 +39,28 @@ ASSET_INVENTORY = {
 # ----------------------------------------------------------------------
 # Known scan output names.
 #
-# These keep the two important lab datasets clearly separated.
+# These keep the important lab datasets clearly separated.
 # ----------------------------------------------------------------------
 
 SCAN_OUTPUT_NAMES = {
     "Metasploitable2 baseline": "baseline_3host",
     "VulnPulse - Windows 10 Credentialed": "windows10_credentialed",
 }
+
+
+# ----------------------------------------------------------------------
+# Comparison configuration.
+#
+# The baseline 3-host scan contains the original unauthenticated
+# Windows 10 results. When processing the credentialed Windows scan,
+# VulnPulse compares the same Windows asset across both datasets.
+# ----------------------------------------------------------------------
+
+BASELINE_SCAN_PATH = Path(
+    "Scans/baseline_3host.json"
+)
+
+WINDOWS_HOST_IP = "192.168.84.129"
 
 
 def _slugify_scan_name(scan_name):
@@ -53,10 +70,117 @@ def _slugify_scan_name(scan_name):
         return SCAN_OUTPUT_NAMES[scan_name]
 
     slug = scan_name.lower()
-    slug = re.sub(r"[^a-z0-9]+", "_", slug)
+    slug = re.sub(
+        r"[^a-z0-9]+",
+        "_",
+        slug
+    )
     slug = slug.strip("_")
 
     return slug or "scan"
+
+
+def _load_saved_scan_dataframe(scan_path):
+    """
+    Load a saved Nessus JSON file and parse it into a DataFrame.
+    """
+
+    scan_path = Path(
+        scan_path
+    )
+
+    if not scan_path.exists():
+        raise FileNotFoundError(
+            f"Saved scan file not found: {scan_path}"
+        )
+
+    with scan_path.open(
+        "r",
+        encoding="utf-8"
+    ) as file:
+        scan_results = json.load(file)
+
+    return parse_vulnerabilities(
+        scan_results
+    )
+
+
+def _filter_by_host(df, host_ip):
+    """Return findings belonging to one specific asset."""
+
+    if "IP Address" not in df.columns:
+        return df.iloc[0:0].copy()
+
+    return df[
+        df["IP Address"]
+        .astype(str)
+        .eq(host_ip)
+    ].copy()
+
+
+def _build_windows_comparison(
+    comparison_df,
+    baseline_path=BASELINE_SCAN_PATH,
+):
+    """
+    Compare the Windows credentialed dataset against the original
+    unauthenticated Windows result from the baseline scan.
+
+    Only the Windows asset is compared so Metasploitable2 and VPLE
+    findings do not distort the visibility comparison.
+    """
+
+    if not baseline_path.exists():
+        print(
+            f"[!] Baseline scan not found: "
+            f"{baseline_path}"
+        )
+
+        return None
+
+    try:
+        baseline_df = _load_saved_scan_dataframe(
+            baseline_path
+        )
+    except (
+        OSError,
+        json.JSONDecodeError,
+        ValueError,
+        KeyError,
+    ) as exc:
+        print(
+            f"[!] Could not load baseline scan for "
+            f"comparison: {exc}"
+        )
+
+        return None
+
+    baseline_windows = _filter_by_host(
+        baseline_df,
+        WINDOWS_HOST_IP
+    )
+
+    comparison_windows = _filter_by_host(
+        comparison_df,
+        WINDOWS_HOST_IP
+    )
+
+    comparison = compare_findings(
+        baseline_windows,
+        comparison_windows,
+    )
+
+    comparison["baseline_scan"] = str(
+        baseline_path
+    )
+
+    comparison["comparison_scan"] = (
+        "windows10_credentialed"
+    )
+
+    comparison["host_ip"] = WINDOWS_HOST_IP
+
+    return comparison
 
 
 def run_pipeline(scan_name=None):
@@ -81,13 +205,15 @@ def run_pipeline(scan_name=None):
         client.scan_name
     )
 
-    raw_path = Path(
-        "Scans"
-    ) / f"{output_name}.json"
+    raw_path = (
+        Path("Scans")
+        / f"{output_name}.json"
+    )
 
-    output_directory = Path(
-        "Outputs"
-    ) / output_name
+    output_directory = (
+        Path("Outputs")
+        / output_name
+    )
 
     output_path = (
         output_directory
@@ -99,6 +225,11 @@ def run_pipeline(scan_name=None):
         / "vulnerability_report.html"
     )
 
+    comparison_path = (
+        output_directory
+        / "scan_comparison.json"
+    )
+
     print("\n[+] Configuration loaded")
     print(f"[+] Nessus URL : {client.base_url}")
     print(f"[+] Scan       : {client.scan_name}")
@@ -108,8 +239,13 @@ def run_pipeline(scan_name=None):
 
     scans = client.get_scans()
 
-    print("[+] Nessus API connection successful")
-    print(f"[+] Available scans: {len(scans)}")
+    print(
+        "[+] Nessus API connection successful"
+    )
+
+    print(
+        f"[+] Available scans: {len(scans)}"
+    )
 
     # ------------------------------------------------------------------
     # Locate the requested scan.
@@ -119,8 +255,14 @@ def run_pipeline(scan_name=None):
 
     scan_id = scan["id"]
 
-    print(f"[+] Scan found : {scan['name']}")
-    print(f"[+] Scan ID    : {scan_id}")
+    print(
+        f"[+] Scan found : {scan['name']}"
+    )
+
+    print(
+        f"[+] Scan ID    : {scan_id}"
+    )
+
     print(
         f"[+] Status     : "
         f"{scan.get('status', 'unknown')}"
@@ -130,13 +272,17 @@ def run_pipeline(scan_name=None):
     # Download scan-level data.
     # ------------------------------------------------------------------
 
-    print("\n[+] Downloading scan results...")
+    print(
+        "\n[+] Downloading scan results..."
+    )
 
     scan_results = client.download_scan(
         scan_id
     )
 
-    print("[+] Scan results downloaded")
+    print(
+        "[+] Scan results downloaded"
+    )
 
     # ------------------------------------------------------------------
     # Build host-specific vulnerability dataset.
@@ -159,7 +305,9 @@ def run_pipeline(scan_name=None):
     )
 
     for host in hosts:
-        host_id = host.get("host_id")
+        host_id = host.get(
+            "host_id"
+        )
 
         hostname = host.get(
             "hostname",
@@ -168,8 +316,8 @@ def run_pipeline(scan_name=None):
 
         if host_id is None:
             print(
-                f"[!] Skipping host without host_id: "
-                f"{hostname}"
+                f"[!] Skipping host without "
+                f"host_id: {hostname}"
             )
             continue
 
@@ -197,21 +345,23 @@ def run_pipeline(scan_name=None):
             vulnerability = vulnerability.copy()
 
             # Preserve the Nessus host association.
-            vulnerability["host_id"] = host_id
+            vulnerability["host_id"] = (
+                host_id
+            )
 
             host_vulnerabilities.append(
                 vulnerability
             )
 
-    # Replace the aggregate vulnerability list with the
-    # host-specific records collected above.
+    # Replace the aggregate vulnerability list
+    # with host-specific records.
     scan_results["vulnerabilities"] = (
         host_vulnerabilities
     )
 
     print(
-        f"[+] Host-specific vulnerability records: "
-        f"{len(host_vulnerabilities)}"
+        f"[+] Host-specific vulnerability "
+        f"records: {len(host_vulnerabilities)}"
     )
 
     # ------------------------------------------------------------------
@@ -297,6 +447,47 @@ def run_pipeline(scan_name=None):
     )
 
     # ------------------------------------------------------------------
+    # Build same-host comparison when processing the credentialed
+    # Windows scan.
+    # ------------------------------------------------------------------
+
+    comparison_result = None
+
+    if (
+        client.scan_name
+        == "VulnPulse - Windows 10 Credentialed"
+    ):
+        print(
+            "\n[+] Building Windows "
+            "authentication visibility comparison..."
+        )
+
+        comparison_result = (
+            _build_windows_comparison(
+                df
+            )
+        )
+
+        if comparison_result:
+            comparison_path.write_text(
+                json.dumps(
+                    comparison_result,
+                    indent=2
+                ),
+                encoding="utf-8"
+            )
+
+            print(
+                "[+] Windows comparison saved: "
+                f"{comparison_path}"
+            )
+
+            print(
+                "[+] Additional visibility: "
+                f"{comparison_result['additional_visibility']}"
+            )
+
+    # ------------------------------------------------------------------
     # Generate HTML report.
     # ------------------------------------------------------------------
 
@@ -314,9 +505,17 @@ def run_pipeline(scan_name=None):
     # Vulnerability summary.
     # ------------------------------------------------------------------
 
-    print("\n" + "=" * 70)
-    print("VULNERABILITY SUMMARY")
-    print("=" * 70)
+    print(
+        "\n" + "=" * 70
+    )
+
+    print(
+        "VULNERABILITY SUMMARY"
+    )
+
+    print(
+        "=" * 70
+    )
 
     summary = df["Severity"].value_counts()
 
@@ -336,9 +535,17 @@ def run_pipeline(scan_name=None):
     # Host summary.
     # ------------------------------------------------------------------
 
-    print("\n" + "=" * 70)
-    print("HOST SUMMARY")
-    print("=" * 70)
+    print(
+        "\n" + "=" * 70
+    )
+
+    print(
+        "HOST SUMMARY"
+    )
+
+    print(
+        "=" * 70
+    )
 
     host_summary = (
         df.groupby(
@@ -365,9 +572,17 @@ def run_pipeline(scan_name=None):
     # Top priority findings.
     # ------------------------------------------------------------------
 
-    print("\n" + "=" * 70)
-    print("TOP PRIORITY FINDINGS")
-    print("=" * 70)
+    print(
+        "\n" + "=" * 70
+    )
+
+    print(
+        "TOP PRIORITY FINDINGS"
+    )
+
+    print(
+        "=" * 70
+    )
 
     top_findings = df[
         [
@@ -390,9 +605,17 @@ def run_pipeline(scan_name=None):
         )
     )
 
-    print("\n" + "=" * 70)
-    print("VulnPulse pipeline completed successfully.")
-    print("=" * 70)
+    print(
+        "\n" + "=" * 70
+    )
+
+    print(
+        "VulnPulse pipeline completed successfully."
+    )
+
+    print(
+        "=" * 70
+    )
 
 
 def parse_arguments():
@@ -400,8 +623,8 @@ def parse_arguments():
 
     parser = argparse.ArgumentParser(
         description=(
-            "Run the VulnPulse Nessus vulnerability "
-            "management pipeline."
+            "Run the VulnPulse Nessus "
+            "vulnerability management pipeline."
         )
     )
 
@@ -410,7 +633,8 @@ def parse_arguments():
         dest="scan_name",
         help=(
             "Nessus scan name to process. "
-            "If omitted, NESSUS_SCAN_NAME from .env is used."
+            "If omitted, NESSUS_SCAN_NAME from "
+            ".env is used."
         ),
     )
 
@@ -419,6 +643,7 @@ def parse_arguments():
 
 if __name__ == "__main__":
     args = parse_arguments()
+
     run_pipeline(
-        scan_name=args.scan
+        scan_name=args.scan_name
     )
