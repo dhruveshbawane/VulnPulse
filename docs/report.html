@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -823,75 +823,6 @@
 
         }
 
-                /* Scan Comparison */
-
-        .comparison-grid {
-            display: grid;
-            grid-template-columns:
-                repeat(4, minmax(0, 1fr));
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-
-        .comparison-card {
-            padding: 16px;
-            background: var(--surface-soft);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-        }
-
-        .comparison-card-label {
-            color: var(--text-muted);
-            font-size: 11px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .comparison-card-value {
-            margin-top: 5px;
-            font-size: 24px;
-            font-weight: 800;
-        }
-
-        .comparison-highlight {
-            border-color: var(--accent);
-            background: var(--accent-soft);
-        }
-
-        .comparison-table {
-            min-width: 620px;
-        }
-
-        .comparison-note {
-            margin-top: 14px;
-            padding: 12px 14px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: var(--surface-soft);
-            color: var(--text-muted);
-            font-size: 12px;
-            line-height: 1.5;
-        }
-
-        @media (max-width: 1100px) {
-
-            .comparison-grid {
-                grid-template-columns:
-                    repeat(2, minmax(0, 1fr));
-            }
-
-        }
-
-        @media (max-width: 650px) {
-
-            .comparison-grid {
-                grid-template-columns: 1fr;
-            }
-
-        }
-
-
         /* ==========================================================
            TABLES
         ========================================================== */
@@ -1004,17 +935,19 @@
 
         }
 
-
-        .sort-button::after {
-
-            content:
-                " ↕";
-
-            opacity:
-                0.45;
-
+        .sort-button.active::after {
+            margin-left: 4px;
+            font-size: 10px;
+            opacity: 0.8;
         }
 
+        .sort-button.active.asc::after {
+            content: "â†‘";
+        }
+
+        .sort-button.active.desc::after {
+            content: "â†“";
+        }
 
         /* ==========================================================
            BADGES
@@ -2292,35 +2225,35 @@
 
 
             <div class="theme-wrap">
-            
+
                 <button class="theme-button" id="themeButton" type="button" aria-label="Change theme" title="Change theme">
                     Theme
                 </button>
-            
-            
+
+
                 <div class="theme-menu" id="themeMenu">
-            
+
                     <button class="theme-option" data-theme-choice="light" type="button">
                         Light
                     </button>
-            
-            
+
+
                     <button class="theme-option" data-theme-choice="dark" type="button">
                         Dark
                     </button>
-            
-            
+
+
                     <button class="theme-option" data-theme-choice="midnight" type="button">
                         Midnight
                     </button>
-            
-            
+
+
                     <button class="theme-option" data-theme-choice="graphite" type="button">
                         Graphite
                     </button>
-            
+
                 </div>
-            
+
             </div>
 
 
@@ -2562,189 +2495,6 @@
 
     </section>
 
-
-        <!-- Scan Comparison -->
-
-    {% if comparison.available %}
-
-    <section class="section">
-
-        <div class="section-header">
-
-            <div>
-
-                <h2>
-                    Scan Comparison
-                </h2>
-
-                <p class="section-description">
-                    Authentication visibility comparison
-                    for {{ comparison["host_ip"] }}.
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <div class="comparison-grid">
-
-            <div class="comparison-card">
-
-                <div class="comparison-card-label">
-                    Baseline Findings
-                </div>
-
-                <div class="comparison-card-value">
-                    {{ comparison["baseline_findings"] }}
-                </div>
-
-            </div>
-
-
-            <div class="comparison-card">
-
-                <div class="comparison-card-label">
-                    Credentialed Findings
-                </div>
-
-                <div class="comparison-card-value">
-                    {{ comparison["comparison_findings"] }}
-                </div>
-
-            </div>
-
-
-            <div class="comparison-card">
-
-                <div class="comparison-card-label">
-                    Common Findings
-                </div>
-
-                <div class="comparison-card-value">
-                    {{ comparison["common_findings"] }}
-                </div>
-
-            </div>
-
-
-            <div class="comparison-card comparison-highlight">
-
-                <div class="comparison-card-label">
-                    Additional Visibility
-                </div>
-
-                <div class="comparison-card-value">
-                    {{ comparison["additional_visibility"] }}
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="table-wrapper">
-
-            <table class="comparison-table">
-
-                <thead>
-
-                    <tr>
-
-                        <th>
-                            Severity
-                        </th>
-
-                        <th>
-                            Baseline
-                        </th>
-
-                        <th>
-                            Credentialed
-                        </th>
-
-                        <th>
-                            Additional Visibility
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                {% for severity in [
-                    "Critical",
-                    "High",
-                    "Medium",
-                    "Low",
-                    "Info"
-                ] %}
-
-                    <tr>
-
-                        <td>
-
-                            <span
-                                class="
-                                    severity
-                                    severity-{{ severity | lower }}
-                                "
-                            >
-                                {{ severity }}
-                            </span>
-
-                        </td>
-
-
-                        <td>
-                            {{ comparison["baseline_severity"][severity] }}
-                        </td>
-
-
-                        <td>
-                            {{ comparison["comparison_severity"][severity] }}
-                        </td>
-
-
-                        <td>
-                            {{
-                                comparison["comparison_severity"][severity]
-                                - comparison["baseline_severity"][severity]
-                            }}
-                        </td>
-
-                    </tr>
-
-                {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-
-        <div class="comparison-note">
-
-            <strong>
-                Interpretation:
-            </strong>
-
-            Additional visibility represents findings
-            exposed by the credentialed scan that were not
-            present in the unauthenticated baseline for this
-            host. It should not be interpreted automatically
-            as newly introduced vulnerabilities.
-
-        </div>
-
-    </section>
-
-    {% endif %}
-
-
     <!-- ==========================================================
          TOP PRIORITY FINDINGS
     ========================================================== -->
@@ -2761,7 +2511,7 @@
 
                 <p class="section-description">
                     Highest-ranked findings using
-                    Severity × Asset Criticality.
+                    Severity Ã— Asset Criticality.
                 </p>
 
             </div>
@@ -3222,7 +2972,7 @@
                 id="closeModal"
                 aria-label="Close finding details"
             >
-                ×
+                Ã—
             </button>
 
         </div>
@@ -3518,6 +3268,40 @@
 
     let sortDescending =
         true;
+
+    function updateSortIndicators() {
+
+        document
+            .querySelectorAll(
+                ".sort-button"
+            )
+            .forEach(
+                function (button) {
+
+                    const isActive =
+                        button.dataset.sort
+                        === sortKey;
+
+                    button.classList.toggle(
+                        "active",
+                        isActive
+                    );
+
+                    button.classList.toggle(
+                        "asc",
+                        isActive &&
+                        !sortDescending
+                    );
+
+                    button.classList.toggle(
+                        "desc",
+                        isActive &&
+                        sortDescending
+                    );
+
+                }
+            );
+        }
 
 
     function normalize(
@@ -4065,7 +3849,7 @@
 
 
         resultStatus.textContent =
-            `Showing ${showingStart}–${showingEnd} of ${filteredFindings.length} findings`;
+            `Showing ${showingStart}â€“${showingEnd} of ${filteredFindings.length} findings`;
 
 
         pageStatus.textContent =
@@ -4083,51 +3867,51 @@
 
 
     document
-        .querySelectorAll(
-            ".sort-button"
-        )
-        .forEach(
-            function (
-                button
-            ) {
+            .querySelectorAll(
+                ".sort-button"
+            )
+            .forEach(
+                function (button) {
 
-                button.addEventListener(
-                    "click",
-                    function () {
+                    button.addEventListener(
+                        "click",
+                        function () {
 
-                        const key =
-                            this.dataset.sort;
+                            const key =
+                                this.dataset.sort;
 
 
-                        if (
-                            sortKey === key
-                        ) {
+                            if (
+                                sortKey === key
+                            ) {
 
-                            sortDescending =
-                                !sortDescending;
+                                sortDescending =
+                                    !sortDescending;
 
-                        } else {
+                            } else {
 
-                            sortKey =
-                                key;
+                                sortKey =
+                                    key;
 
-                            sortDescending =
-                                true;
+                                sortDescending =
+                                    true;
+
+                            }
+
+
+                            currentPage =
+                                1;
+
+
+                            updateSortIndicators();
+
+                            renderTable();
 
                         }
+                    );
 
-
-                        currentPage =
-                            1;
-
-
-                        renderTable();
-
-                    }
-                );
-
-            }
-        );
+                }
+            );
 
 
     searchInput.addEventListener(
@@ -4708,8 +4492,9 @@
 
     populateHosts();
 
-    renderTable();
+    updateSortIndicators();
 
+    renderTable();
 </script>
 
 </body>
