@@ -493,9 +493,10 @@ def run_pipeline(scan_name=None):
 
     generate_report(
         df,
-        report_path
+        report_path,
+        comparison_result=comparison_result,
     )
-
+    
     print(
         f"[+] HTML report saved: "
         f"{report_path}"

@@ -55,7 +55,6 @@ def _prepare_report_data(df):
         if "IP Address" not in report_data.columns:
             report_data["IP Address"] = report_data["Host"]
 
-
     # ----------------------------------------------------------
     # Ensure all report fields exist
     # ----------------------------------------------------------
@@ -64,7 +63,6 @@ def _prepare_report_data(df):
 
         if column not in report_data.columns:
             report_data[column] = default
-
 
     # ----------------------------------------------------------
     # Clean missing values
@@ -81,11 +79,88 @@ def _prepare_report_data(df):
         }
     )
 
-
     return report_data
 
 
-def generate_report(df, output_path):
+def _prepare_comparison_data(comparison_result=None):
+    """
+    Prepare optional scan comparison data for the report template.
+
+    The comparison module returns a dictionary containing finding
+    counts, asset counts, and severity distributions. When no
+    comparison is available, return a disabled/default structure
+    so existing report generation continues to work.
+    """
+
+    default_comparison = {
+        "available": False,
+        "baseline_scan": "N/A",
+        "comparison_scan": "N/A",
+        "host_ip": "N/A",
+
+        "baseline_findings": 0,
+        "comparison_findings": 0,
+        "baseline_unique_findings": 0,
+        "comparison_unique_findings": 0,
+
+        "common_findings": 0,
+        "baseline_only_findings": 0,
+        "comparison_only_findings": 0,
+        "additional_visibility": 0,
+
+        "baseline_assets": 0,
+        "comparison_assets": 0,
+
+        "baseline_severity": {
+            "Critical": 0,
+            "High": 0,
+            "Medium": 0,
+            "Low": 0,
+            "Info": 0,
+        },
+
+        "comparison_severity": {
+            "Critical": 0,
+            "High": 0,
+            "Medium": 0,
+            "Low": 0,
+            "Info": 0,
+        },
+    }
+
+    if not comparison_result:
+        return default_comparison
+
+    prepared = default_comparison.copy()
+
+    prepared.update(comparison_result)
+
+    prepared["available"] = True
+
+    prepared["baseline_severity"] = {
+        **default_comparison["baseline_severity"],
+        **comparison_result.get(
+            "baseline_severity",
+            {}
+        ),
+    }
+
+    prepared["comparison_severity"] = {
+        **default_comparison["comparison_severity"],
+        **comparison_result.get(
+            "comparison_severity",
+            {}
+        ),
+    }
+
+    return prepared
+
+
+def generate_report(
+    df,
+    output_path,
+    comparison_result=None,
+):
     """
     Generate the VulnPulse HTML vulnerability management report.
 
@@ -96,6 +171,10 @@ def generate_report(df, output_path):
 
     output_path : str or pathlib.Path
         Destination path for the generated HTML report.
+
+    comparison_result : dict, optional
+        Optional scan comparison data produced by
+        vulnpulse.comparison.compare_findings().
 
     Returns
     -------
@@ -114,7 +193,6 @@ def generate_report(df, output_path):
         / "docs"
     )
 
-
     # ----------------------------------------------------------
     # Prepare Jinja environment
     # ----------------------------------------------------------
@@ -127,13 +205,15 @@ def generate_report(df, output_path):
         "report.html"
     )
 
-
     # ----------------------------------------------------------
     # Prepare report data
     # ----------------------------------------------------------
 
     report_data = _prepare_report_data(df)
 
+    comparison = _prepare_comparison_data(
+        comparison_result
+    )
 
     # ----------------------------------------------------------
     # Severity summary
@@ -156,7 +236,6 @@ def generate_report(df, output_path):
         )
         for severity in severity_order
     }
-
 
     # ----------------------------------------------------------
     # Asset summary
@@ -187,7 +266,6 @@ def generate_report(df, output_path):
         )
     )
 
-
     # ----------------------------------------------------------
     # Top priority findings
     #
@@ -205,7 +283,6 @@ def generate_report(df, output_path):
         )
     )
 
-
     # ----------------------------------------------------------
     # Complete finding dataset
     #
@@ -218,7 +295,6 @@ def generate_report(df, output_path):
             orient="records"
         )
     )
-
 
     # ----------------------------------------------------------
     # Render HTML
@@ -235,8 +311,8 @@ def generate_report(df, output_path):
         asset_summary=asset_summary,
         top_findings=top_findings,
         all_findings=all_findings,
+        comparison=comparison,
     )
-
 
     # ----------------------------------------------------------
     # Ensure output directory exists
@@ -247,7 +323,6 @@ def generate_report(df, output_path):
         exist_ok=True
     )
 
-
     # ----------------------------------------------------------
     # Write report
     # ----------------------------------------------------------
@@ -256,6 +331,5 @@ def generate_report(df, output_path):
         html,
         encoding="utf-8"
     )
-
 
     return output_path
